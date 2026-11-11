@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>수행평가 점수 확인</title>
+<script src="config.js"></script>
+<style>
+  :root{
+    --bg:#f3f6fb; --card:#fff; --ink:#1d2433; --sub:#5b667a; --line:#dde3ee;
+    --pri:#2f6fed; --pri-d:#1f55c4; --good:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --gA:#2563eb; --gB:#0d9488; --gC:#ca8a04; --gD:#ea580c; --gE:#6b7280;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;font-size:20px;line-height:1.5}
+  button,input,select,textarea{font:inherit;color:inherit}
+  .hidden{display:none!important}
+  .view{max-width:860px;margin:0 auto;padding:18px 14px 60px}
+  .card{background:var(--card);border-radius:20px;box-shadow:0 4px 18px rgba(30,50,90,.08);padding:26px 22px}
+  h1{font-size:30px;margin:6px 0 10px}
+  label{display:block;margin:14px 0 4px;font-weight:700}
+  input[type=text],input[type=password],input:not([type]),textarea,select,input[type=datetime-local],input[type=number]{
+    width:100%;padding:13px 14px;border:2px solid var(--line);border-radius:12px;background:#fff;font-size:22px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--pri)}
+  .btn{border:0;border-radius:12px;padding:11px 18px;background:#e7ecf5;cursor:pointer;font-weight:700}
+  .btn:hover{filter:brightness(.97)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.primary{background:var(--pri);color:#fff}
+  .btn.danger{background:var(--bad);color:#fff}
+  .btn.ghost{background:transparent;color:var(--sub)}
+  .btn.big{width:100%;padding:17px;font-size:24px;margin-top:20px}
+  .btn.small{font-size:16px;padding:8px 12px}
+  .msg{min-height:1.5em;margin:12px 0 0;font-weight:700;color:var(--bad)}
+  .msg.ok{color:var(--good)}
+  .badge{display:inline-block;background:#e8f0fe;color:var(--pri-d);border-radius:999px;padding:4px 14px;font-size:17px;font-weight:700}
+  .state{border-radius:12px;padding:12px 14px;font-weight:700;margin:8px 0 6px;background:#eef2f8}
+  .state.good{background:#e7f8ee;color:#126b37}.state.wait{background:#fff6e5;color:#8a5200}.state.bad{background:#fdecec;color:#9b1c1c}
+  .notes{color:var(--sub);font-size:17px;padding-left:22px;margin:18px 0 0}
+  .teacher-btn{display:block;margin:22px auto 0}
+  .muted{color:var(--sub)}
+
+  /* ── 결과 화면 ── */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;gap:12px;align-items:center;justify-content:space-between;
+    background:#1f2d4d;color:#fff;border-radius:16px;padding:12px 16px;margin-bottom:12px}
+  .topbar b{font-size:24px}
+  .topbar .btn{color:var(--ink);white-space:nowrap}
+  .sign-head .btn{white-space:nowrap;flex:none}
+  .timer{background:rgba(255,255,255,.14);border-radius:999px;padding:4px 14px;font-weight:700;white-space:nowrap}
+  .timer.warn{background:#dc2626}
+  .toolbar{display:flex;gap:8px;justify-content:flex-end;margin:6px 0 10px}
+  details.sec{background:var(--card);border-radius:18px;box-shadow:0 3px 14px rgba(30,50,90,.07);margin:0 0 14px;overflow:hidden}
+  details.sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:18px 18px;font-size:24px;font-weight:800}
+  details.sec>summary::-webkit-details-marker{display:none}
+  details.sec>summary::after{content:'▼ 접기';margin-left:auto;font-size:15px;color:var(--sub);font-weight:700;white-space:nowrap}
+  details.sec:not([open])>summary::after{content:'▶ 펼치기'}
+  details.sec .no{display:inline-grid;place-items:center;min-width:38px;height:38px;border-radius:12px;background:var(--pri);color:#fff;font-size:20px;padding:0 6px}
+  .sum{font-size:19px;color:var(--pri-d);background:#e8f0fe;border-radius:999px;padding:3px 12px;white-space:nowrap}
+  .sec-body{padding:0 18px 20px}
+  .item{border:2px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+  .item-head{font-weight:700}
+  .tag{display:inline-block;font-size:15px;background:#eef2f8;color:var(--sub);border-radius:8px;padding:1px 8px;margin-right:6px}
+  .item-score{font-size:22px;margin-top:4px}.item-score b{font-size:32px;color:var(--pri-d)}
+  .bar{height:12px;background:#edf1f7;border-radius:99px;margin-top:8px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,#5b8cff,#2f6fed);border-radius:99px}
+  .total{margin-top:14px;padding:14px;border-radius:14px;background:#1f2d4d;color:#fff;font-size:22px;text-align:center}
+  .total b{font-size:34px}
+  table.score{width:100%;border-collapse:collapse;margin-top:8px}
+  table.score th,table.score td{border-bottom:1px solid var(--line);padding:10px 6px;text-align:center}
+  table.score th{font-size:16px;color:var(--sub)}
+  table.score td:first-child,table.score th:first-child{text-align:left}
+  table.score tr.sumrow td{font-weight:800;border-top:2px solid var(--ink);border-bottom:0}
+  .formula{font-size:16px;color:var(--sub)}
+  .note{font-size:16px;color:var(--sub);margin-top:10px}
+  .grade{display:inline-grid;place-items:center;width:58px;height:58px;border-radius:16px;color:#fff;font-size:32px;font-weight:900;flex:none}
+  .gA{background:var(--gA)}.gB{background:var(--gB)}.gC{background:var(--gC)}.gD{background:var(--gD)}.gE{background:var(--gE)}
+  .targets{display:grid;gap:10px;margin-top:10px}
+  .target{display:flex;gap:14px;align-items:center;border:2px solid var(--line);border-radius:14px;padding:10px 14px}
+  .target .t1{font-size:16px;color:var(--sub)}
+  .target .t2{font-size:22px;font-weight:700}
+  .target .t2 b{font-size:30px;color:var(--pri-d)}
+  .target.done{background:#effaf3;border-color:#b7e6c8}.target.no{background:#f6f7f9;color:var(--sub)}
+  .sim{margin-top:16px;padding:14px;border-radius:14px;background:#f5f8ff;border:2px dashed #b9cbf5}
+  .sim input{max-width:180px;display:inline-block}
+  .sim-out{margin-top:10px;font-size:22px;font-weight:700;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .opt{display:flex;gap:12px;align-items:flex-start;border:2px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;cursor:pointer;font-weight:400}
+  .opt input{width:26px;height:26px;margin-top:3px;flex:none}
+  .opt:has(input:checked){border-color:var(--pri);background:#f1f5ff}
+  textarea{min-height:110px;resize:vertical}
+  .sign-box{border:2px solid var(--line);border-radius:14px;padding:10px;margin-top:8px;background:#fafbfd}
+  .sign-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:17px;color:var(--sub)}
+  #signPad{display:block;width:100%;height:190px;background:#fff;border:2px dashed #b9c3d6;border-radius:12px;margin-top:6px;touch-action:none;cursor:crosshair}
+  .done-box{border-radius:14px;padding:16px;background:#e7f8ee;color:#126b37;font-weight:700;margin:6px 0 10px}
+  .done-box.issue{background:#fff6e5;color:#8a5200}
+
+  /* ── 캡처·유출 억제 ── */
+  .protect{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .protect input,.protect textarea{-webkit-user-select:text;user-select:text}
+  #watermark{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:.11;background-repeat:repeat}
+  body.guarded #vResult{filter:blur(22px)}
+  #guard{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:rgba(20,28,45,.92);color:#fff;text-align:center;font-size:30px;font-weight:800;cursor:pointer}
+  #guard small{font-size:20px;font-weight:400}
+
+  /* ── 선생님 모드 ── */
+  #vAdmin{max-width:1280px}
+  .topbar.admin{background:#173f2f}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  .row label{margin:0;font-weight:700}
+  .row select{width:auto;min-width:160px}
+  .row input[type=datetime-local]{width:auto}
+  .pill{font-size:16px;border-radius:999px;padding:3px 12px;background:#eef2f8;white-space:nowrap}
+  .pill.on{background:#16a34a;color:#fff}.pill.off{background:#9ca3af;color:#fff}.pill.wait{background:#d97706;color:#fff}.pill.warn{background:#dc2626;color:#fff}
+  .quick button{margin:4px 4px 4px 0}
+  .checks{display:flex;gap:8px;flex-wrap:wrap}
+  .checks label{display:flex;align-items:center;gap:6px;border:2px solid var(--line);border-radius:10px;padding:6px 10px;margin:0;font-weight:700;cursor:pointer}
+  .checks input{width:20px;height:20px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .chip{border-radius:12px;padding:8px 14px;background:#eef2f8;font-weight:700}
+  .chip b{font-size:24px;margin-left:6px}
+  .chip.g{background:#e7f8ee;color:#126b37}.chip.o{background:#fff6e5;color:#8a5200}.chip.r{background:#fdecec;color:#9b1c1c}
+  .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:70vh;background:#fff}
+  table.stat{border-collapse:collapse;width:100%;font-size:17px}
+  table.stat th{position:sticky;top:0;background:#f1f4f9;z-index:1;padding:8px;font-size:15px;white-space:nowrap}
+  table.stat td{border-top:1px solid var(--line);padding:7px 8px;text-align:center;white-space:nowrap}
+  table.stat td.memo{white-space:normal;text-align:left;min-width:200px}
+  table.stat tr.issue td{background:#fff8ec}
+  .ok-t{color:var(--good);font-weight:800}.no-t{color:var(--bad);font-weight:800}.mid-t{color:var(--warn);font-weight:800}
+  .tip{background:#fffbe6;border:1px solid #f3e1a0;border-radius:12px;padding:10px 14px;font-size:17px}
+  table.grid{border-collapse:collapse;font-size:17px}
+  table.grid th{position:sticky;top:0;background:#f1f4f9;z-index:1;padding:6px;font-size:14px;line-height:1.25}
+  table.grid td{border:1px solid var(--line);padding:0}
+  table.grid td.rn{padding:0 6px;color:var(--sub);font-size:13px;text-align:right}
+  table.grid input{width:96px;border:0;border-radius:0;padding:7px 6px;font-size:18px;text-align:center;background:transparent}
+  table.grid input.w-name{width:110px}
+  table.grid input.w-s{width:60px}
+  table.grid input:focus{outline:2px solid var(--pri);background:#f1f5ff}
+  table.grid input.err{background:#fde2e2}
+  table.grid input.warn{background:#fff3cd}
+  table.grid td.psum{padding:0 10px;font-weight:800;color:var(--pri-d)}
+  table.grid button{border:0;background:none;cursor:pointer;font-size:18px;padding:4px 8px}
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1f2d4d;color:#fff;padding:12px 20px;border-radius:12px;
+    font-weight:700;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+  #toast.show{opacity:1}
+
+  /* ── 비밀번호 쪽지 인쇄 ── */
+  #slipArea{display:none}
+  @media print{
+    body:not(.printing-slips) > *{display:none!important}
+    body:not(.printing-slips)::after{content:'이 화면은 인쇄할 수 없어요.'}
+    body.printing-slips > *:not(#slipArea){display:none!important}
+    body.printing-slips #slipArea{display:grid!important;grid-template-columns:1fr 1fr 1fr;gap:0}
+    .slip{border:1px dashed #888;padding:10px 12px;font-size:13px;break-inside:avoid;line-height:1.45}
+    .slip b{font-size:16px}.slip .pw{font-size:20px;font-weight:800;letter-spacing:2px}
+    @page{margin:10mm}
+  }
+  @media (max-width:560px){
+    html,body{font-size:18px}
+    details.sec>summary{font-size:21px;flex-wrap:wrap}
+    .topbar b{font-size:20px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────── 학생 로그인 ───────── -->
+<section id="vLogin" class="view">
+  <div class="card">
+    <span class="badge">🔒 나만 보는 점수 확인</span>
+    <h1 id="appTitle">수행평가 점수 확인</h1>
+    <div id="openState" class="state">확인 시간을 불러오는 중…</div>
+    <label for="inSid">학번</label>
+    <input id="inSid" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="예) 10601 (1학년 6반 1번)">
+    <label for="inName">이름</label>
+    <input id="inName" autocomplete="off" maxlength="20" placeholder="이름">
+    <label for="inPw">비밀번호</label>
+    <input id="inPw" type="password" autocomplete="off" maxlength="30" placeholder="선생님이 나눠 준 비밀번호">
+    <button id="btnLogin" class="btn primary big">내 점수 확인하기</button>
+    <p id="loginMsg" class="msg"></p>
+    <ul class="notes">
+      <li>비밀번호를 친구에게 보여 주거나 알려 주지 마세요.</li>
+      <li>점수 화면은 캡처·촬영·공유하지 마세요. 화면에 내 학번과 이름이 흐리게 찍혀 있어요.</li>
+      <li>확인이 끝나면 꼭 <b>[나가기]</b>를 누르세요.</li>
+    </ul>
+  </div>
+  <button id="btnTeacher" class="btn ghost small teacher-btn">👩‍🏫 선생님 모드</button>
+</section>
+
+<!-- ───────── 학생 점수 화면 ───────── -->
+<section id="vResult" class="view hidden protect">
+  <div class="topbar">
+    <div><b id="rName"></b> <span id="rSid"></span></div>
+    <div class="timer" id="rTimerBox">⏱ <span id="rTimer"></span> 남음</div>
+    <button id="btnLogout" class="btn small">나가기</button>
+  </div>
+  <div class="toolbar">
+    <button class="btn small" id="btnOpenAll">모두 펼치기</button>
+    <button class="btn small" id="btnCloseAll">모두 접기</button>
+  </div>
+  <div id="rBody"></div>
+</section>
+<div id="watermark" class="hidden"></div>
+
+<!-- ───────── 선생님 로그인 ───────── -->
+<section id="vAdminLogin" class="view hidden">
+  <div class="card">
+    <h1>👩‍🏫 선생님 모드</h1>
+    <label for="inAdminPw">선생님 비밀번호</label>
+    <input id="inAdminPw" type="password" autocomplete="off">
+    <button id="btnAdminLogin" class="btn primary big">들어가기</button>
+    <p id="adminLoginMsg" class="msg"></p>
+  </div>
+  <button id="btnBackLogin" class="btn ghost small teacher-btn">← 학생 화면으로</button>
+</section>
+
+<!-- ───────── 선생님 모드 ───────── -->
+<section id="vAdmin" class="view hidden">
+  <div class="topbar admin">
+    <b>👩‍🏫 선생님 모드</b>
+    <span id="aSync" class="muted" style="color:#cfe"></span>
+    <button id="btnAdminOut" class="btn small">나가기</button>
+  </div>
+
+  <details class="sec" open>
+    <summary><span class="no">⏰</span> 점수 확인 시간 열기·닫기 <span id="aWinPill" class="pill"></span></summary>
+    <div class="sec-body">
+      <div id="aWinText" class="state">-</div>
+      <div class="row"><b>열어 줄 반</b>
+        <label style="font-weight:400"><input type="checkbox" id="aAllCls"> 전체</label>
+        <div id="aClassChecks" class="checks"></div>
+      </div>
+      <div class="row quick"><b>바로 열기</b>
+        <button class="btn" data-min="10">지금부터 10분</button>
+        <button class="btn" data-min="15">15분</button>
+        <button class="btn" data-min="20">20분</button>
+        <button class="btn" data-min="30">30분</button>
+        <button class="btn" data-min="45">45분</button>
+      </div>
+      <div class="row"><b>시간 지정</b>
+        <label>시작 <input type="datetime-local" id="aStart"></label>
+        <label>끝 <input type="datetime-local" id="aEnd"></label>
+        <button id="btnSaveWin" class="btn primary">이 시간으로 저장</button>
+      </div>
+      <div class="row"><button id="btnCloseNow" class="btn danger">🔒 지금 바로 닫기</button>
+        <span class="muted" style="font-size:16px">닫으면 보고 있던 학생 화면도 1분 안에 자동으로 닫혀요.</span></div>
+    </div>
+  </details>
+
+  <details class="sec" open>
+    <summary><span class="no">✔</span> 학생 확인·서명 현황 <span id="aStatSum" class="sum"></span></summary>
+    <div class="sec-body">
+      <div class="row">
+        <select id="aStatClass"></select>
+        <button id="btnReload" class="btn">새로고침</button>
+        <label style="font-weight:400"><input type="checkbox" id="aAuto" checked> 30초마다 자동 새로고침</label>
+      </div>
+      <div id="aChips" class="chips"></div>
+      <div class="table-wrap"><table id="aStatTable" class="stat"></table></div>
+      <div class="row" style="font-size:17px">비밀번호를 5번 틀려 잠긴 학생 풀기:
+        <input id="aUnlockCls" style="width:90px" placeholder="반" inputmode="numeric">
+        <input id="aUnlockNo" style="width:90px" placeholder="번호" inputmode="numeric">
+        <button id="btnUnlock" class="btn">잠금 풀기</button></div>
+    </div>
+  </details>
+
+  <details class="sec" open>
+    <summary><span class="no">✏</span> 점수·비밀번호 입력 <span id="aDirty" class="pill warn hidden">저장 안 됨</span></summary>
+    <div class="sec-body">
+      <div class="tip">💡 엑셀·구글 시트에서 여러 칸을 복사(Ctrl+C)한 뒤, 표에서 <b>붙여 넣을 첫 칸</b>을 누르고 Ctrl+V 하면 한꺼번에 들어가요.
+        칸 순서: <b>반 · 번호 · 이름 · 비밀번호 · 점수들</b> (반·번호는 숫자만, 예: 6 / 1). 학번(예: 10601)은 자동으로 만들어져요.<br>
+        다 넣은 뒤 <b>[시트에 저장하기]</b>를 꼭 누르세요.<br>
+        중간·기말은 <b>100점 만점 원점수</b> 그대로 넣으면 자동으로 25점으로 환산돼요. 기말은 아직이면 비워 두세요.</div>
+      <div class="row">
+        <select id="aGridClass"></select>
+        <button id="btnAddRows" class="btn">줄 5개 추가</button>
+        <button id="btnGenPw" class="btn">빈 비밀번호 자동 만들기</button>
+        <button id="btnPrintSlips" class="btn">비밀번호 쪽지 인쇄</button>
+        <button id="btnReloadGrid" class="btn">시트에서 다시 불러오기</button>
+        <button id="btnSaveGrid" class="btn primary">💾 시트에 저장하기</button>
+      </div>
+      <div class="table-wrap"><table id="aGrid" class="grid"></table></div>
+    </div>
+  </details>
+</section>
+
+<div id="guard" class="hidden"><div>🔒<br>점수를 가렸어요<br><small>화면을 누르면 다시 보여요</small></div></div>
+<div id="slipArea"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isNum = v => typeof v === 'number' && isFinite(v);
+const sum = a => a.reduce((x, y) => x + y, 0);
+const fmt = v => { const r = Math.round(v * 100) / 100; return Number.isInteger(r) ? String(r) : String(r); };
+const pad2 = n => String(n).padStart(2, '0');
+const hm = ms => { const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const mdhm = ms => { const d = new Date(ms); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm(ms); };
+const clsKey = sid => String(sid).slice(0, 3);
+const clsLabel = k => k.length === 3 && /^\d+$/.test(k) ? `${k[0]}학년 ${parseInt(k.slice(1), 10)}반` : '기타';
+
+let META = null;     // 평가 항목·등급 기준 (서버에서 받음)
+let S = null;        // 학생 접속 정보 (메모리에만 보관, 저장 안 함)
+let A = null;        // 선생님 모드 정보
+let mode = 'login';
+let timers = [];
+
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2600); }
+function show(id) { ['vLogin','vResult','vAdminLogin','vAdmin'].forEach(v => $('#' + v).classList.toggle('hidden', v !== id)); window.scrollTo(0, 0); }
+function setMsg(sel, t, ok) { const el = $(sel); el.textContent = t || ''; el.classList.toggle('ok', !!ok); }
+function clearTimers() { timers.forEach(t => clearInterval(t)); timers = []; }
+
+async function api(action, data) {
+  const url = window.CONFIG && CONFIG.APPS_SCRIPT_URL;
+  if (!url || !/^https:\/\/script\.google\.com\//.test(url)) throw new Error('config.js에 Apps Script 웹 앱 주소가 아직 들어 있지 않아요.');
+  const res = await fetch(url, { method: 'POST', body: JSON.stringify(Object.assign({ action }, data || {})) });
+  if (!res.ok) throw new Error('서버에 연결하지 못했어요. (' + res.status + ')');
+  return res.json();
+}
+
+function applyMeta() {
+  if (!META) return;
+  $('#appTitle').textContent = META.title;
+  document.title = META.title;
+}
+
+/* ════════════════ 학생 ════════════════ */
+async function loadStatus() {
+  const el = $('#openState');
+  try {
+    const r = await api('status');
+    if (!r.ok) throw new Error(r.msg);
+    META = r.meta; applyMeta();
+    const w = r.window, cls = w.classes && w.classes.length ? ' · ' + w.classes.map(clsLabel).join(', ') : '';
+    if (w.open) { el.innerHTML = '🟢 지금 확인할 수 있어요 <b>(' + hm(w.end) + '까지' + esc(cls) + ')</b>'; el.className = 'state good'; }
+    else if (w.start && w.start > r.now) { el.textContent = '🕒 ' + mdhm(w.start) + '부터 확인할 수 있어요' + cls; el.className = 'state wait'; }
+    else { el.textContent = '🔒 지금은 점수 확인 시간이 아니에요'; el.className = 'state bad'; }
+  } catch (e) { el.textContent = '⚠ ' + e.message; el.className = 'state bad'; }
+}
+
+async function doLogin() {
+  const sid = $('#inSid').value.trim(), name = $('#inName').value.trim(), pw = $('#inPw').value.trim();
+  if (!sid || !name || !pw) return setMsg('#loginMsg', '학번, 이름, 비밀번호를 모두 입력하세요.');
+  const b = $('#btnLogin'); b.disabled = true; setMsg('#loginMsg', '확인하는 중…', true);
+  try {
+    const r = await api('login', { sid, name, pw });
+    if (!r.ok) { setMsg('#loginMsg', r.msg); if (r.code === 'closed') loadStatus(); return; }
+    META = r.meta; applyMeta();
+    S = { token: r.token, student: r.student, scores: r.scores, end: r.end, offset: r.now - Date.now(), submitted: r.submitted };
+    $('#inPw').value = ''; setMsg('#loginMsg', '');
+    startStudent();
+  } catch (e) { setMsg('#loginMsg', e.message); }
+  finally { b.disabled = false; }
+}
+
+function startStudent() {
+  mode = 'student';
+  $('#rName').textContent = S.student.name;
+  $('#rSid').textContent = S.student.sid;
+  renderResult();
+  setWatermark();
+  show('vResult');
+  initPad();
+  tick();
+  timers.push(setInterval(tick, 1000));
+  timers.push(setInterval(ping, 60000));
+}
+
+function endStudent(reason) {
+  clearTimers();
+  S = null; mode = 'login';
+  $('#rBody').innerHTML = '';
+  $('#rName').textContent = ''; $('#rSid').textContent = '';
+  $('#watermark').classList.add('hidden'); $('#watermark').style.backgroundImage = '';
+  unguard();
+  show('vLogin');
+  $('#inSid').value = ''; $('#inName').value = ''; $('#inPw').value = '';
+  setMsg('#loginMsg', reason || '', !reason);
+  loadStatus();
+}
+
+function tick() {
+  if (!S) return;
+  const left = S.end - (Date.now() + S.offset);
+  if (left <= 0) return endStudent('확인 시간이 끝나서 화면을 닫았어요.');
+  const s = Math.floor(left / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+  $('#rTimer').textContent = (h ? h + ':' + pad2(m) : m) + ':' + pad2(ss);
+  $('#rTimerBox').classList.toggle('warn', left < 60000);
+}
+async function ping() {
+  if (!S) return;
+  try {
+    const r = await api('ping', { token: S.token });
+    if (!S) return;
+    if (r.ok && !r.alive) endStudent(r.msg);
+    else if (r.ok && r.end) { S.end = r.end; S.offset = r.now - Date.now(); }
+  } catch (e) { /* 잠깐 끊겨도 계속 */ }
+}
+
+function gradeOf(total) {
+  const t = Math.round(total * 1e6) / 1e6;
+  const cuts = META.cuts.slice().sort((a, b) => b.min - a.min);
+  return (cuts.find(c => t >= c.min) || cuts[cuts.length - 1]).grade;
+}
+const gBadge = g => `<span class="grade g${esc(g)}">${esc(g)}</span>`;
+const ceil1 = v => Math.ceil(v * 10 - 1e-7) / 10;
+
+function renderResult() {
+  const items = META.items, sc = S.scores;
+  const perf = items.filter(i => i.group === 'perf');
+  const exam = items.filter(i => i.group === 'exam');
+  const conv = i => isNum(sc[i.key]) ? sc[i.key] * i.weight / i.max : null;
+  const perfMax = sum(perf.map(i => i.weight));
+  const perfMissing = perf.some(i => !isNum(sc[i.key]));
+  const perfSum = sum(perf.map(i => conv(i) || 0));
+  const cuts = META.cuts.slice().sort((a, b) => b.min - a.min);
+  let h = '';
+
+  // ① 수행평가
+  h += `<details class="sec" open><summary><span class="no">1</span> 수행평가 점수 <span class="sum">${fmt(perfSum)} / ${perfMax}점</span></summary><div class="sec-body">`;
+  perf.forEach(i => {
+    const v = sc[i.key];
+    h += `<div class="item"><div class="item-head"><span class="tag">${esc(i.tag)}</span>${esc(i.label)}</div>
+      <div class="item-score">${isNum(v) ? `<b>${fmt(v)}</b> / ${i.max}점` : `<span class="muted">${v == null ? '아직 점수가 없어요' : esc(v)}</span>`}</div>
+      ${isNum(v) ? `<div class="bar"><i style="width:${Math.max(0, Math.min(100, v / i.max * 100))}%"></i></div>` : ''}</div>`;
+  });
+  h += `<div class="total">수행평가 합계 <b>${fmt(perfSum)}</b> / ${perfMax}점${perfMissing ? '<br><small>(아직 없는 점수는 빼고 더했어요)</small>' : ''}</div></div></details>`;
+
+  // ② 지필 합산
+  let cur = perfSum, curMax = perfMax, allIn = !perfMissing;
+  let rows = `<tr><td>수행평가 합계</td><td>${fmt(perfSum)} / ${perfMax}</td><td>${perfMax}점</td><td><b>${fmt(perfSum)}</b></td></tr>`;
+  exam.forEach(i => {
+    const v = sc[i.key], c = conv(i);
+    if (c != null) { cur += c; curMax += i.weight; } else allIn = false;
+    rows += `<tr><td>${esc(i.label)}<div class="formula">원점수 × ${fmt(i.weight / i.max)}</div></td>
+      <td>${isNum(v) ? fmt(v) + ' / ' + i.max : `<span class="muted">${v == null ? '아직 안 봄' : esc(v)}</span>`}</td>
+      <td>${i.weight}점</td><td><b>${c != null ? fmt(c) : '-'}</b></td></tr>`;
+  });
+  const totalMax = sum(items.map(i => i.weight));
+  rows += `<tr class="sumrow"><td>지금까지 합계</td><td></td><td>${curMax}점</td><td>${fmt(cur)}</td></tr>`;
+  h += `<details class="sec" open><summary><span class="no">2</span> 수행 + 중간 + 기말 합산 <span class="sum">${fmt(cur)} / ${curMax}점</span></summary><div class="sec-body">
+    <table class="score"><thead><tr><th>평가</th><th>내 점수</th><th>반영 점수</th><th>환산 점수</th></tr></thead><tbody>${rows}</tbody></table>
+    ${allIn ? `<div class="total" style="display:flex;gap:16px;align-items:center;justify-content:center">최종 ${fmt(cur)} / ${totalMax}점 ${gBadge(gradeOf(cur))}</div>`
+            : `<div class="note">※ 아직 점수가 없는 평가는 빼고 더했어요. 모두 합치면 ${totalMax}점 만점이에요.</div>`}
+    <div class="note">※ 실제 학기 성적은 학교 성적 처리 규정(반올림 등)에 따라 조금 다를 수 있어요.</div>
+  </div></details>`;
+
+  // ③ 기말 목표
+  const t = items.find(i => i.key === META.targetKey);
+  h += `<details class="sec" open><summary><span class="no">3</span> ${esc(t ? t.label : '기말고사')} 몇 점이면 무슨 등급? </summary><div class="sec-body">`;
+  const others = items.filter(i => i !== t);
+  const otherMissing = others.some(i => !isNum(sc[i.key]));
+  if (!t) h += `<p class="muted">계산할 시험이 정해지지 않았어요.</p>`;
+  else if (isNum(sc[t.key])) h += `<p>${esc(t.label)} 점수가 이미 들어가 있어요. 위 ②에서 최종 점수와 등급을 확인하세요.</p>`;
+  else if (otherMissing) h += `<p class="muted">아직 점수가 없는 평가가 있어서 계산할 수 없어요.</p>`;
+  else {
+    const base = sum(others.map(i => conv(i)));
+    h += `<p>지금까지 <b>${fmt(base)}점</b> / ${sum(others.map(i => i.weight))}점이에요. ${esc(t.label)}(${t.max}점 만점)에서 아래 점수를 받으면 그 등급이 돼요.</p><div class="targets">`;
+    cuts.forEach((c, idx) => {
+      if (c.min <= 0) {
+        const up = cuts[idx - 1];
+        h += `<div class="target"><span class="grade g${esc(c.grade)}">${esc(c.grade)}</span><div><div class="t1">합계 ${up ? up.min + '점 미만' : ''}</div><div class="t2">위 등급 점수에 못 미치면</div></div></div>`;
+        return;
+      }
+      const need = (c.min - base) * t.max / t.weight;
+      const range = idx ? `합계 ${c.min}점 이상 ${cuts[idx - 1].min}점 미만` : `합계 ${c.min}점 이상`;
+      let cls = '', txt;
+      if (need <= 0) { cls = 'done'; txt = `${esc(t.label)} 0점이어도 이미 넘었어요 ✔`; }
+      else if (need > t.max) { cls = 'no'; txt = `${esc(t.label)} ${t.max}점을 받아도 닿기 어려워요`; }
+      else txt = `${esc(t.label)} <b>${fmt(ceil1(need))}점</b> 이상`;
+      h += `<div class="target ${cls}"><span class="grade g${esc(c.grade)}">${esc(c.grade)}</span><div><div class="t1">${range}</div><div class="t2">${txt}</div></div></div>`;
+    });
+    h += `</div>
+      <div class="sim"><b>🎯 내 ${esc(t.label)} 점수 예상해 보기</b><br>
+        <input type="number" id="simIn" min="0" max="${t.max}" step="0.1" placeholder="예) 85" inputmode="decimal"> 점
+        <div class="sim-out" id="simOut"><span class="muted">점수를 넣으면 예상 합계와 등급이 나와요.</span></div></div>
+      <div class="note">※ 실제 등급은 학교 성적 처리 규정(반올림 등)에 따라 조금 다를 수 있어요.</div>`;
+    S._sim = { base, t };
+  }
+  h += `</div></details>`;
+
+  // ④ 확인·서명
+  h += `<details class="sec" open id="secSign"><summary><span class="no">4</span> 점수 확인 & 서명 제출 <span id="signPill" class="pill"></span></summary><div class="sec-body">
+    <div id="doneBox"></div>
+    <div id="signForm">
+      <label class="opt"><input type="radio" name="dec" value="ok"><span>✅ 위 점수를 모두 확인했고, <b>이상이 없습니다.</b></span></label>
+      <label class="opt"><input type="radio" name="dec" value="issue"><span>❗ 점수에 <b>이상한 부분이 있어요.</b> (선생님께 알려요)</span></label>
+      <textarea id="memo" class="hidden" maxlength="500" placeholder="어떤 평가 점수가 왜 이상한지 적어 주세요."></textarea>
+      <label for="signName">내 이름 쓰기</label>
+      <input id="signName" autocomplete="off" maxlength="20" placeholder="본인 이름">
+      <div class="sign-box"><div class="sign-head"><span>✍ 아래 칸에 손가락이나 펜, 마우스로 서명하세요</span><button class="btn small" id="btnClearSign" type="button">지우기</button></div>
+        <canvas id="signPad"></canvas></div>
+      <button id="btnSubmit" class="btn primary big">제출하기</button>
+      <p id="submitMsg" class="msg"></p>
+    </div>
+  </div></details>`;
+
+  $('#rBody').innerHTML = h;
+  renderSubmitted();
+
+  const sim = $('#simIn');
+  if (sim) sim.addEventListener('input', () => {
+    const x = parseFloat(sim.value), o = $('#simOut'), st = S._sim;
+    if (!isFinite(x) || x < 0 || x > st.t.max) { o.innerHTML = `<span class="muted">0~${st.t.max} 사이 점수를 넣어 주세요.</span>`; return; }
+    const tot = st.base + x * st.t.weight / st.t.max;
+    o.innerHTML = `예상 합계 <b>${fmt(tot)}점</b> → ${gBadge(gradeOf(tot))}`;
+  });
+  $$('input[name=dec]').forEach(r => r.addEventListener('change', () => $('#memo').classList.toggle('hidden', r.value !== 'issue' || !r.checked)));
+  $('#btnSubmit').addEventListener('click', doSubmit);
+  $('#btnClearSign').addEventListener('click', () => pad.clear());
+}
+
+function renderSubmitted() {
+  const s = S.submitted, box = $('#doneBox'), pill = $('#signPill'), form = $('#signForm');
+  if (!s) { box.innerHTML = ''; pill.textContent = '아직 안 냄'; pill.className = 'pill warn'; form.classList.remove('hidden'); return; }
+  const issue = s.result === '이의 있음';
+  box.innerHTML = `<div class="done-box ${issue ? 'issue' : ''}">${issue ? '❗' : '✅'} ${esc(s.result)} — ${s.at ? mdhm(s.at) : ''}에 제출했어요.
+    ${issue ? '<br><small>선생님이 확인한 뒤 알려 줄 거예요.</small>' : ''}</div>
+    <button class="btn" id="btnResubmit" type="button">다시 제출하기</button>`;
+  pill.textContent = '제출 완료'; pill.className = 'pill on';
+  form.classList.add('hidden');
+  $('#btnResubmit').addEventListener('click', () => { form.classList.remove('hidden'); $('#btnResubmit').remove(); pad.resize(true); });
+}
+
+async function doSubmit() {
+  const dec = document.querySelector('input[name=dec]:checked');
+  if (!dec) return setMsg('#submitMsg', '확인 결과를 골라 주세요.');
+  const memo = $('#memo').value.trim();
+  if (dec.value === 'issue' && !memo) return setMsg('#submitMsg', '어떤 점수가 이상한지 적어 주세요.');
+  const nm = $('#signName').value.replace(/\s+/g, '');
+  if (nm !== S.student.name.replace(/\s+/g, '')) return setMsg('#submitMsg', '이름 칸에 본인 이름을 정확히 써 주세요.');
+  if (pad.points < 15) return setMsg('#submitMsg', '서명 칸에 서명을 해 주세요.');
+  const b = $('#btnSubmit'); b.disabled = true; setMsg('#submitMsg', '제출하는 중…', true);
+  try {
+    const r = await api('submit', { token: S.token, decision: dec.value, memo, signName: nm, signImage: pad.toData() });
+    if (!r.ok) {
+      if (r.code === 'expired' || r.code === 'closed') return endStudent(r.msg);
+      return setMsg('#submitMsg', r.msg);
+    }
+    S.submitted = r.submitted;
+    setMsg('#submitMsg', '');
+    renderSubmitted();
+    toast('제출했어요. 확인해 줘서 고마워요!');
+  } catch (e) { setMsg('#submitMsg', e.message); }
+  finally { if (b.isConnected) b.disabled = false; }
+}
+
+/* 서명 패드 */
+const pad = {
+  c: null, ctx: null, points: 0, drawing: false,
+  init(c) {
+    this.c = c; this.ctx = c.getContext('2d'); this.points = 0;
+    c.addEventListener('pointerdown', e => { e.preventDefault(); this.drawing = true; c.setPointerCapture(e.pointerId); const p = this.pos(e); this.ctx.beginPath(); this.ctx.moveTo(p.x, p.y); });
+    c.addEventListener('pointermove', e => { if (!this.drawing) return; e.preventDefault(); const p = this.pos(e); this.ctx.lineTo(p.x, p.y); this.ctx.stroke(); this.points++; });
+    const up = () => { this.drawing = false; };
+    c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+    this.resize(true);
+  },
+  pos(e) { const r = this.c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; },
+  resize(force) {
+    if (!this.c) return;
+    const r = this.c.getBoundingClientRect();
+    if (!r.width) return;
+    if (!force && this.points) return;
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    this.c.width = Math.round(r.width * dpr); this.c.height = Math.round(r.height * dpr);
+    const x = this.ctx; x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.fillStyle = '#fff'; x.fillRect(0, 0, r.width, r.height);
+    x.lineWidth = 3.2; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#111';
+    this.points = 0;
+  },
+  clear() { this.resize(true); },
+  toData() { return this.c.toDataURL('image/png'); },
+};
+function initPad() {
+  const c = $('#signPad');
+  if (c) pad.init(c);
+  const sec = $('#secSign');
+  if (sec) sec.addEventListener('toggle', () => pad.resize(false));
+}
+window.addEventListener('resize', () => { if (mode === 'student') pad.resize(false); });
+
+/* 워터마크: 학번·이름·시각을 화면 전체에 흐리게 */
+function setWatermark() {
+  const d = new Date();
+  const txt = `${S.student.sid} ${S.student.name} · ${d.getMonth() + 1}/${d.getDate()} ${hm(d.getTime())}`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="190"><text x="10" y="120" transform="rotate(-22 170 95)" font-family="sans-serif" font-size="22" font-weight="700" fill="#1d2433">${esc(txt)}</text></svg>`;
+  const el = $('#watermark');
+  el.style.backgroundImage = `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
+  el.classList.remove('hidden');
+}
+
+/* 캡처·복사·인쇄 억제 (학생 점수 화면에서만) */
+function guard() { if (mode !== 'student') return; $('#guard').classList.remove('hidden'); document.body.classList.add('guarded'); }
+function unguard() { $('#guard').classList.add('hidden'); document.body.classList.remove('guarded'); }
+$('#guard').addEventListener('click', unguard);
+window.addEventListener('blur', guard);
+document.addEventListener('visibilitychange', () => { if (document.hidden) guard(); });
+window.addEventListener('beforeprint', guard);
+['contextmenu', 'copy', 'cut', 'dragstart', 'selectstart'].forEach(ev => document.addEventListener(ev, e => {
+  if (mode !== 'student') return;
+  const t = e.target;
+  if ((ev === 'selectstart' || ev === 'copy' || ev === 'cut') && t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  e.preventDefault();
+}));
+document.addEventListener('keydown', e => {
+  if (mode !== 'student') return;
+  const k = (e.key || '').toLowerCase(), mod = e.ctrlKey || e.metaKey;
+  if (k === 'meta' || k === 'os' || k === 'printscreen') { guard(); }
+  if (k === 'printscreen' || k === 'f12' || (mod && ['p', 's', 'u'].includes(k)) || (mod && e.shiftKey && ['i', 'j', 'c', 's', '3', '4', '5'].includes(k))) {
+    e.preventDefault(); guard();
+  }
+});
+document.addEventListener('keyup', e => {
+  if (mode !== 'student') return;
+  if ((e.key || '').toLowerCase() === 'printscreen') {
+    guard();
+    try { navigator.clipboard && navigator.clipboard.writeText('캡처할 수 없는 화면이에요.'); } catch (_) {}
+  }
+});
+
+/* ════════════════ 선생님 모드 ════════════════ */
+async function adminLogin() {
+  const pw = $('#inAdminPw').value;
+  if (!pw) return setMsg('#adminLoginMsg', '비밀번호를 입력하세요.');
+  const b = $('#btnAdminLogin'); b.disabled = true; setMsg('#adminLoginMsg', '확인하는 중…', true);
+  try {
+    const r = await api('adminLogin', { pw });
+    if (!r.ok) return setMsg('#adminLoginMsg', r.msg);
+    $('#inAdminPw').value = ''; setMsg('#adminLoginMsg', '');
+    A = { token: r.token, rows: [], vis: [], dirty: false, data: null, offset: 0 };
+    mode = 'admin';
+    show('vAdmin');
+    await adminLoad(true);
+    timers.push(setInterval(() => { if ($('#aAuto').checked) adminLoad(false).catch(() => {}); }, 30000));
+    timers.push(setInterval(renderWindow, 15000));
+  } catch (e) { setMsg('#adminLoginMsg', e.message); }
+  finally { b.disabled = false; }
+}
+function adminLogout(msg) {
+  if (A && A.dirty && !confirm('저장하지 않은 점수가 있어요. 그래도 나갈까요?')) return;
+  clearTimers(); A = null; mode = 'login';
+  $('#aGrid').innerHTML = ''; $('#aStatTable').innerHTML = '';
+  show('vLogin'); setMsg('#loginMsg', msg || '', !msg); loadStatus();
+}
+async function adminCall(action, data) {
+  const r = await api(action, Object.assign({ token: A.token }, data || {}));
+  if (!r.ok && r.code === 'adminExpired') { A.dirty = false; adminLogout(r.msg); throw new Error(r.msg); }
+  return r;
+}
+async function adminLoad(withGrid) {
+  if (!A) return;
+  const r = await adminCall('adminLoad');
+  if (!r.ok) { toast(r.msg); return; }
+  META = r.meta; A.data = r; A.offset = r.now - Date.now();
+  buildClassOptions();
+  renderWindow(); renderStatus();
+  if (withGrid) { loadGrid(r.students); renderGrid(); }
+  $('#aSync').textContent = '불러온 시각 ' + hm(Date.now());
+}
+const nowS = () => Date.now() + (A ? A.offset : 0);
+
+function allClasses() {
+  const set = new Set();
+  (A.data ? A.data.students : []).forEach(s => set.add(clsKey(s.sid)));
+  A.rows.forEach(r => { const s = sidOf(r); if (s) set.add(clsKey(s)); });
+  return [...set].sort();
+}
+function buildClassOptions() {
+  const cl = allClasses();
+  ['#aStatClass', '#aGridClass'].forEach(sel => {
+    const el = $(sel), cur = el.value;
+    el.innerHTML = `<option value="">전체 반</option>` + cl.map(c => `<option value="${esc(c)}">${esc(clsLabel(c))}</option>`).join('');
+    if (cl.includes(cur)) el.value = cur;
+  });
+  const box = $('#aClassChecks');
+  const prev = new Set($$('#aClassChecks input:checked').map(i => i.value));
+  const w = A.data.window, fromServer = !box.dataset.touched;
+  box.innerHTML = cl.map(c => {
+    const on = fromServer ? (!w.classes.length || w.classes.includes(c)) : prev.has(c);
+    return `<label><input type="checkbox" value="${esc(c)}" ${on ? 'checked' : ''}>${esc(clsLabel(c))}</label>`;
+  }).join('');
+  syncAllCls();
+}
+function syncAllCls() { const cb = $$('#aClassChecks input'); $('#aAllCls').checked = cb.length > 0 && cb.every(i => i.checked); }
+function selectedClasses() {
+  const cb = $$('#aClassChecks input'), sel = cb.filter(i => i.checked).map(i => i.value);
+  if (!sel.length) throw new Error('열어 줄 반을 하나 이상 고르세요.');
+  return sel.length === cb.length ? [] : sel;
+}
+function toLocalInput(ms) { if (!ms) return ''; const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+
+function renderWindow() {
+  if (!A || !A.data) return;
+  const w = A.data.window, now = nowS();
+  const open = w.start > 0 && w.end > w.start && now >= w.start && now < w.end;
+  const future = w.start > now;
+  const pill = $('#aWinPill'), txt = $('#aWinText');
+  const cls = w.classes.length ? w.classes.map(clsLabel).join(', ') : '전체 반';
+  if (open) { pill.textContent = '🟢 열림'; pill.className = 'pill on'; txt.className = 'state good';
+    txt.textContent = `지금 열려 있어요: ${mdhm(w.start)} ~ ${hm(w.end)} (${cls}) — ${Math.ceil((w.end - now) / 60000)}분 남음`; }
+  else if (future && w.end > w.start) { pill.textContent = '🕒 예약됨'; pill.className = 'pill wait'; txt.className = 'state wait';
+    txt.textContent = `예약: ${mdhm(w.start)} ~ ${hm(w.end)} (${cls})`; }
+  else { pill.textContent = '🔒 닫힘'; pill.className = 'pill off'; txt.className = 'state bad';
+    txt.textContent = '지금은 닫혀 있어요. 학생이 비밀번호를 넣어도 들어올 수 없어요.'; }
+  if (document.activeElement !== $('#aStart')) $('#aStart').value = toLocalInput(w.start);
+  if (document.activeElement !== $('#aEnd')) $('#aEnd').value = toLocalInput(w.end);
+}
+async function setWindow(start, end, classes) {
+  const r = await adminCall('adminSetWindow', { start, end, classes });
+  if (!r.ok) return toast(r.msg);
+  A.data.window = r.window; A.offset = r.now - Date.now();
+  $('#aClassChecks').dataset.touched = '';
+  renderWindow();
+  toast(end && end > Date.now() + A.offset ? '저장했어요.' : '닫았어요.');
+}
+
+function renderStatus() {
+  const d = A.data, cls = $('#aStatClass').value;
+  const list = d.students.filter(s => !cls || clsKey(s.sid) === cls).sort((a, b) => a.sid.localeCompare(b.sid));
+  let viewed = 0, ok = 0, issue = 0, notSub = 0, notView = 0, rows = '';
+  list.forEach(s => {
+    const r = d.records[s.sid] || {};
+    const v = r.views > 0;
+    if (v) viewed++; else notView++;
+    if (r.result === '이상 없음') ok++; else if (r.result === '이의 있음') issue++; else if (v) notSub++;
+    const res = r.result === '이상 없음' ? '<span class="ok-t">✔ 이상 없음</span>'
+      : r.result === '이의 있음' ? '<span class="mid-t">❗ 이의 있음</span>' : '<span class="no-t">미제출</span>';
+    const sign = /^https:\/\/(drive|docs)\.google\.com\//.test(r.signUrl || '') ? `<a href="${esc(r.signUrl)}" target="_blank" rel="noopener noreferrer">서명 보기</a>` : '-';
+    rows += `<tr class="${r.result === '이의 있음' ? 'issue' : ''}"><td>${esc(s.cls)}</td><td>${esc(s.no)}</td><td>${esc(s.name)}</td>
+      <td>${v ? `<span class="ok-t">✔</span> ${r.views}회 · ${r.lastView ? mdhm(r.lastView) : ''}` : '<span class="no-t">안 봄</span>'}</td>
+      <td>${res}${r.submitCount > 1 ? ` <small>(${r.submitCount}번)</small>` : ''}</td>
+      <td class="memo">${esc(r.memo || '')}</td><td>${sign}</td><td>${r.submittedAt ? mdhm(r.submittedAt) : '-'}</td></tr>`;
+  });
+  $('#aStatTable').innerHTML = `<thead><tr><th>반</th><th>번호</th><th>이름</th><th>점수 확인</th><th>확인·서명</th><th>이의 내용</th><th>서명</th><th>제출 시각</th></tr></thead><tbody>${rows || '<tr><td colspan="8">학생이 없어요. 아래 점수 입력에서 학생을 넣고 저장하세요.</td></tr>'}</tbody>`;
+  $('#aChips').innerHTML = `<span class="chip">전체<b>${list.length}</b></span><span class="chip g">점수 확인<b>${viewed}</b></span>
+    <span class="chip g">이상 없음 서명<b>${ok}</b></span><span class="chip o">이의 있음<b>${issue}</b></span>
+    <span class="chip r">보고 미제출<b>${notSub}</b></span><span class="chip r">아직 안 봄<b>${notView}</b></span>`;
+  $('#aStatSum').textContent = `서명 ${ok + issue}/${list.length}`;
+}
+
+/* 점수 입력 표 */
+let COLS = [];
+function buildCols() {
+  COLS = [{ k: 'cls', label: '반', cls: 'w-s', num: 20 }, { k: 'no', label: '번호', cls: 'w-s', num: 99 }, { k: 'name', label: '이름', cls: 'w-name' }, { k: 'pw', label: '비밀번호' }]
+    .concat(META.items.map(i => ({ k: 's', item: i, label: `${esc(i.header.replace(/\(.*\)/, ''))}<br>(${i.max}점)` })));
+}
+const emptyRow = () => ({ cls: '', no: '', name: '', pw: '', s: {} });
+const toInt = v => { const n = parseInt(String(v == null ? '' : v).replace(/[^\d]/g, ''), 10); return isNaN(n) ? 0 : n; };
+const sidOf = r => { const c = toInt(r.cls), n = toInt(r.no); return c && n ? String(META.grade || 1) + pad2(c) + pad2(n) : ''; };
+const getV = (r, c) => c.item ? (r.s[c.item.key] == null ? '' : String(r.s[c.item.key])) : r[c.k];
+const setV = (r, c, v) => { if (c.item) r.s[c.item.key] = v; else r[c.k] = v; };
+const rowHas = r => String(r.cls).trim() || String(r.no).trim() || r.name.trim() || r.pw.trim() || Object.values(r.s).some(v => String(v).trim());
+function loadGrid(students) {
+  buildCols();
+  A.rows = students.map(s => {
+    const r = { cls: String(s.cls), no: String(s.no), name: s.name, pw: s.pw, s: {} };
+    META.items.forEach(i => { r.s[i.key] = s.scores[i.key] == null ? '' : String(s.scores[i.key]); });
+    return r;
+  });
+  A.rows.sort((a, b) => sidOf(a).localeCompare(sidOf(b)));
+  for (let i = 0; i < 5; i++) A.rows.push(emptyRow());
+  setDirty(false);
+}
+function setDirty(v) { A.dirty = v; $('#aDirty').classList.toggle('hidden', !v); }
+function dupSet() {
+  const seen = {}, dup = new Set();
+  A.rows.forEach(r => { const s = sidOf(r); if (!s) return; if (seen[s]) dup.add(s); seen[s] = 1; });
+  return dup;
+}
+function cellState(r, c, dup) {
+  if (c.num) {
+    if (!rowHas(r)) return '';
+    const raw = String(getV(r, c)).trim(), n = toInt(raw);
+    if (!n || n > c.num || /[^\d반번\s]/.test(raw)) return 'err';
+    return dup.has(sidOf(r)) ? 'err' : '';
+  }
+  if (c.k === 'name') return rowHas(r) && !r.name.trim() ? 'err' : '';
+  if (c.item) {
+    const raw = getV(r, c).trim(); if (!raw) return '';
+    const n = Number(raw); if (isNaN(n)) return raw.length > 10 ? 'err' : 'warn';
+    return n < 0 || n > c.item.max ? 'err' : '';
+  }
+  return '';
+}
+function perfSumOf(r) {
+  let t = 0, any = false;
+  META.items.filter(i => i.group === 'perf').forEach(i => { const n = Number(r.s[i.key]); if (String(r.s[i.key] || '').trim() && !isNaN(n)) { t += n * i.weight / i.max; any = true; } });
+  return any ? fmt(t) : '';
+}
+function renderGrid() {
+  const cls = $('#aGridClass').value;
+  A.vis = A.rows.map((r, i) => i).filter(i => !cls || clsKey(sidOf(A.rows[i])) === cls);
+  const dup = dupSet();
+  let h = '<thead><tr><th></th>' + COLS.map(c => `<th>${c.label}</th>`).join('') + '<th>수행<br>합계</th><th></th></tr></thead><tbody>';
+  A.vis.forEach((idx, n) => {
+    const r = A.rows[idx];
+    h += `<tr data-i="${idx}"><td class="rn">${n + 1}</td>` + COLS.map((c, ci) =>
+      `<td><input data-c="${ci}" class="${c.cls || ''} ${cellState(r, c, dup)}" value="${esc(getV(r, c))}" autocomplete="off" ${c.item ? 'inputmode="decimal"' : ''}></td>`).join('')
+      + `<td class="psum">${perfSumOf(r)}</td><td><button data-del title="이 줄 지우기">🗑</button></td></tr>`;
+  });
+  $('#aGrid').innerHTML = h + '</tbody>';
+}
+function refreshSidStates() {
+  const dup = dupSet();
+  $$('#aGrid tbody tr').forEach(tr => {
+    const r = A.rows[Number(tr.dataset.i)];
+    [0, 1, 2].forEach(ci => {
+      const inp = tr.querySelector(`input[data-c="${ci}"]`);
+      inp.classList.remove('err'); const st = cellState(r, COLS[ci], dup); if (st) inp.classList.add(st);
+    });
+  });
+}
+const grid = $('#aGrid');
+grid.addEventListener('input', e => {
+  const t = e.target; if (t.tagName !== 'INPUT') return;
+  const tr = t.closest('tr'), r = A.rows[Number(tr.dataset.i)], c = COLS[Number(t.dataset.c)];
+  setV(r, c, t.value); setDirty(true);
+  t.classList.remove('err', 'warn'); const st = cellState(r, c, dupSet()); if (st) t.classList.add(st);
+  if (!c.item) refreshSidStates();
+  tr.querySelector('.psum').textContent = perfSumOf(r);
+});
+grid.addEventListener('keydown', e => {
+  const t = e.target; if (t.tagName !== 'INPUT') return;
+  if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(e.key)) return;
+  e.preventDefault();
+  const tr = e.key === 'ArrowUp' ? t.closest('tr').previousElementSibling : t.closest('tr').nextElementSibling;
+  if (tr) { const nx = tr.querySelector(`input[data-c="${t.dataset.c}"]`); nx.focus(); nx.select(); }
+});
+grid.addEventListener('click', e => {
+  const b = e.target.closest('button[data-del]'); if (!b) return;
+  const idx = Number(b.closest('tr').dataset.i), r = A.rows[idx];
+  if (rowHas(r) && !confirm(`${r.cls}반 ${r.no}번 ${r.name || ''} 줄을 지울까요? (저장해야 시트에서도 지워져요)`)) return;
+  A.rows.splice(idx, 1); setDirty(true); renderGrid();
+});
+grid.addEventListener('paste', e => {
+  const t = e.target; if (t.tagName !== 'INPUT') return;
+  const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+  let lines = text.replace(/\r/g, '').split('\n');
+  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+  if (lines.length === 1 && lines[0].indexOf('\t') < 0) return; // 한 칸 붙여넣기는 그대로
+  e.preventDefault();
+  const r0 = A.vis.indexOf(Number(t.closest('tr').dataset.i)), c0 = Number(t.dataset.c);
+  let added = 0;
+  lines.forEach((ln, i) => {
+    let idx;
+    if (r0 + i < A.vis.length) idx = A.vis[r0 + i];
+    else { A.rows.push(emptyRow()); idx = A.rows.length - 1; A.vis.push(idx); added++; }
+    ln.split('\t').forEach((cell, j) => { const c = COLS[c0 + j]; if (c) setV(A.rows[idx], c, cell.trim()); });
+  });
+  if (added && $('#aGridClass').value) $('#aGridClass').value = '';
+  setDirty(true); buildClassOptions(); renderGrid();
+  toast(`${lines.length}줄을 붙여 넣었어요. [시트에 저장하기]를 눌러야 저장돼요.`);
+});
+
+function genPw() {
+  const used = new Set(A.rows.map(r => r.pw.trim()).filter(Boolean));
+  const rnd = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + a[0] % 900000); };
+  let n = 0;
+  A.rows.forEach(r => { if (sidOf(r) && !r.pw.trim()) { let p; do { p = rnd(); } while (used.has(p)); used.add(p); r.pw = p; n++; } });
+  if (!n) return toast('비밀번호가 빈 학생이 없어요.');
+  setDirty(true); renderGrid(); toast(`${n}명의 비밀번호를 만들었어요. [시트에 저장하기]를 눌러 주세요.`);
+}
+
+async function saveGrid() {
+  const dup = dupSet();
+  const bad = A.rows.some(r => rowHas(r) && COLS.some(c => cellState(r, c, dup) === 'err'));
+  if (bad) return toast('빨간 칸을 먼저 고쳐 주세요. (반·번호 빠짐·중복, 이름 빠짐, 만점 초과 등)');
+  const rows = A.rows.filter(rowHas).map(r => ({ cls: String(r.cls).trim(), no: String(r.no).trim(), name: r.name.trim(), pw: r.pw.trim(), scores: r.s }));
+  if (!rows.length) return toast('저장할 학생이 없어요.');
+  const noPw = rows.filter(r => !r.pw).length;
+  if (!confirm(`${rows.length}명을 시트에 저장할까요?\n시트의 '학생점수' 탭이 이 표 내용으로 바뀌어요.` + (noPw ? `\n(비밀번호가 빈 학생 ${noPw}명은 점수를 볼 수 없어요)` : ''))) return;
+  const b = $('#btnSaveGrid'); b.disabled = true;
+  try {
+    const r = await adminCall('adminSaveScores', { rows });
+    if (!r.ok) return toast(r.msg);
+    setDirty(false); toast(`${r.count}명을 저장했어요.`);
+    await adminLoad(true);
+  } catch (e) { toast(e.message); }
+  finally { b.disabled = false; }
+}
+
+function printSlips() {
+  if (A.dirty) return toast('먼저 [시트에 저장하기]를 눌러 주세요.');
+  const list = A.vis.map(i => A.rows[i]).filter(r => sidOf(r) && r.pw.trim());
+  if (!list.length) return toast('인쇄할 학생(비밀번호 있음)이 없어요.');
+  const url = location.origin + location.pathname;
+  $('#slipArea').innerHTML = list.map(r => `<div class="slip"><div>${esc(META.title)}</div>
+    <b>${esc(toInt(r.cls))}반 ${esc(toInt(r.no))}번 ${esc(r.name)}</b><div>학번 <span class="pw">${esc(sidOf(r))}</span></div><div>비밀번호 <span class="pw">${esc(r.pw)}</span></div>
+    <div style="font-size:11px;word-break:break-all">${esc(url)}</div><div style="font-size:11px">※ 다른 사람에게 보여 주지 말고, 확인 후 찢어서 버리세요.</div></div>`).join('');
+  document.body.classList.add('printing-slips');
+  const done = () => { document.body.classList.remove('printing-slips'); $('#slipArea').innerHTML = ''; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1500);
+}
+
+/* ════════════════ 버튼 연결 ════════════════ */
+$('#btnLogin').addEventListener('click', doLogin);
+['#inSid', '#inName', '#inPw'].forEach(s => $(s).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); }));
+$('#btnLogout').addEventListener('click', () => endStudent());
+$('#btnOpenAll').addEventListener('click', () => { $$('#rBody details').forEach(d => d.open = true); pad.resize(false); });
+$('#btnCloseAll').addEventListener('click', () => $$('#rBody details').forEach(d => d.open = false));
+$('#btnTeacher').addEventListener('click', () => { show('vAdminLogin'); $('#inAdminPw').focus(); });
+$('#btnBackLogin').addEventListener('click', () => show('vLogin'));
+$('#btnAdminLogin').addEventListener('click', adminLogin);
+$('#inAdminPw').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+$('#btnAdminOut').addEventListener('click', () => adminLogout());
+$('#aClassChecks').addEventListener('change', () => { $('#aClassChecks').dataset.touched = '1'; syncAllCls(); });
+$('#aAllCls').addEventListener('change', e => { $$('#aClassChecks input').forEach(i => i.checked = e.target.checked); $('#aClassChecks').dataset.touched = '1'; });
+$$('.quick button').forEach(b => b.addEventListener('click', async () => {
+  try { const cls = selectedClasses(), s = nowS(); await setWindow(s, s + Number(b.dataset.min) * 60000, cls); } catch (e) { toast(e.message); }
+}));
+$('#btnSaveWin').addEventListener('click', async () => {
+  try {
+    const s = new Date($('#aStart').value).getTime(), en = new Date($('#aEnd').value).getTime();
+    if (!s || !en || isNaN(s) || isNaN(en)) throw new Error('시작과 끝 시간을 모두 넣어 주세요.');
+    if (en <= s) throw new Error('끝 시간이 시작 시간보다 뒤여야 해요.');
+    await setWindow(s, en, selectedClasses());
+  } catch (e) { toast(e.message); }
+});
+$('#btnCloseNow').addEventListener('click', async () => { if (confirm('지금 바로 점수 확인을 닫을까요?')) { try { await setWindow(0, 0, []); } catch (e) { toast(e.message); } } });
+$('#btnReload').addEventListener('click', () => adminLoad(false).then(() => toast('새로 불러왔어요.')).catch(e => toast(e.message)));
+$('#aStatClass').addEventListener('change', renderStatus);
+$('#btnUnlock').addEventListener('click', async () => {
+  try { const r = await adminCall('adminUnlock', { cls: $('#aUnlockCls').value, no: $('#aUnlockNo').value }); toast(r.ok ? '잠금을 풀었어요.' : r.msg); if (r.ok) { $('#aUnlockCls').value = ''; $('#aUnlockNo').value = ''; } } catch (e) { toast(e.message); }
+});
+$('#aGridClass').addEventListener('change', renderGrid);
+$('#btnAddRows').addEventListener('click', () => { for (let i = 0; i < 5; i++) A.rows.push(emptyRow()); $('#aGridClass').value = ''; renderGrid(); });
+$('#btnGenPw').addEventListener('click', genPw);
+$('#btnPrintSlips').addEventListener('click', printSlips);
+$('#btnReloadGrid').addEventListener('click', async () => {
+  if (A.dirty && !confirm('저장하지 않은 내용이 사라져요. 시트에서 다시 불러올까요?')) return;
+  try { await adminLoad(true); toast('시트에서 다시 불러왔어요.'); } catch (e) { toast(e.message); }
+});
+$('#btnSaveGrid').addEventListener('click', saveGrid);
+window.addEventListener('beforeunload', e => { if (mode === 'admin' && A && A.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+loadStatus();
+</script>
+</body>
+</html>
