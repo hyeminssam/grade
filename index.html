@@ -94,6 +94,9 @@
   #signPad{display:block;width:100%;height:190px;background:#fff;border:2px dashed #b9c3d6;border-radius:12px;margin-top:6px;touch-action:none;cursor:crosshair}
   .done-box{border-radius:14px;padding:16px;background:#e7f8ee;color:#126b37;font-weight:700;margin:6px 0 10px}
   .done-box.issue{background:#fff6e5;color:#8a5200}
+  .done-box.changed{position:sticky;top:78px;z-index:15;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+  .tell{border-radius:14px;padding:14px 16px;background:#eef5ff;border:2px solid #b9cbf5;margin:4px 0 12px;font-size:19px}
+  .opt input[type=checkbox]{width:28px;height:28px}
 
   /* ── 캡처·유출 억제 ── */
   .protect{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -110,6 +113,7 @@
   .row label{margin:0;font-weight:700}
   .row select{width:auto;min-width:160px}
   .row input[type=datetime-local]{width:auto}
+  .pill:empty{display:none}
   .pill{font-size:16px;border-radius:999px;padding:3px 12px;background:#eef2f8;white-space:nowrap}
   .pill.on{background:#16a34a;color:#fff}.pill.off{background:#9ca3af;color:#fff}.pill.wait{background:#d97706;color:#fff}.pill.warn{background:#dc2626;color:#fff}
   .quick button{margin:4px 4px 4px 0}
@@ -139,6 +143,14 @@
   table.grid input.err{background:#fde2e2}
   table.grid input.warn{background:#fff3cd}
   table.grid td.psum{padding:0 10px;font-weight:800;color:var(--pri-d)}
+  table.grid td.ck{text-align:center;padding:0 4px}
+  table.grid input[type=checkbox],table.grid th input[type=checkbox]{width:20px;height:20px;cursor:pointer}
+  table.grid tr.hl td{background:#fff3b0}
+  img.sig{height:54px;max-width:170px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:zoom-in;display:block;margin:auto}
+  img.sig:not([src]){width:120px;background:#f1f4f9}
+  #sigModal{position:fixed;inset:0;z-index:150;background:rgba(20,28,45,.6);display:grid;place-items:center;cursor:pointer}
+  .sigbox{background:#fff;border-radius:18px;padding:18px;max-width:92vw;text-align:center;font-weight:800;font-size:22px}
+  .sigbox img{display:block;max-width:85vw;width:760px;border:1px solid var(--line);border-radius:10px;margin:10px 0}
   table.grid button{border:0;background:none;cursor:pointer;font-size:18px;padding:4px 8px}
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1f2d4d;color:#fff;padding:12px 20px;border-radius:12px;
     font-weight:700;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
@@ -253,7 +265,7 @@
       <div class="row">
         <select id="aStatClass"></select>
         <button id="btnReload" class="btn">새로고침</button>
-        <label style="font-weight:400"><input type="checkbox" id="aAuto" checked> 30초마다 자동 새로고침</label>
+        <label style="font-weight:400"><input type="checkbox" id="aAuto" checked> 15초마다 자동 새로고침</label>
       </div>
       <div id="aChips" class="chips"></div>
       <div class="table-wrap"><table id="aStatTable" class="stat"></table></div>
@@ -270,14 +282,17 @@
       <div class="tip">💡 엑셀·구글 시트에서 여러 칸을 복사(Ctrl+C)한 뒤, 표에서 <b>붙여 넣을 첫 칸</b>을 누르고 Ctrl+V 하면 한꺼번에 들어가요.
         칸 순서: <b>반 · 번호 · 이름 · 비밀번호 · 점수들</b> (반·번호는 숫자만, 예: 6 / 1). 학번(예: 10601)은 자동으로 만들어져요.<br>
         다 넣은 뒤 <b>[시트에 저장하기]</b>를 꼭 누르세요.<br>
+        🔑 비밀번호 만들기·쪽지 인쇄는 학생 앞 칸에 <b>✔ 체크한 학생만</b> 해요 (체크가 없으면 비밀번호가 빈 학생 전부).
+        반을 골라 보고 있을 때 저장하면 <b>그 반만</b> 저장돼요.<br>
         중간·기말은 <b>100점 만점 원점수</b> 그대로 넣으면 자동으로 25점으로 환산돼요. 기말은 아직이면 비워 두세요.</div>
       <div class="row">
         <select id="aGridClass"></select>
         <button id="btnAddRows" class="btn">줄 5개 추가</button>
-        <button id="btnGenPw" class="btn">빈 비밀번호 자동 만들기</button>
+        <button id="btnGenPw" class="btn">🔑 비밀번호 만들기</button>
         <button id="btnPrintSlips" class="btn">비밀번호 쪽지 인쇄</button>
         <button id="btnReloadGrid" class="btn">시트에서 다시 불러오기</button>
         <button id="btnSaveGrid" class="btn primary">💾 시트에 저장하기</button>
+        <span id="aSelCount" class="pill"></span>
       </div>
       <div class="table-wrap"><table id="aGrid" class="grid"></table></div>
     </div>
@@ -285,6 +300,7 @@
 </section>
 
 <div id="guard" class="hidden"><div>🔒<br>점수를 가렸어요<br><small>화면을 누르면 다시 보여요</small></div></div>
+<div id="sigModal" class="hidden"><div class="sigbox"><div id="sigWho"></div><img id="sigBig" alt="서명"><div class="muted" style="font-size:16px">아무 곳이나 누르면 닫혀요</div></div></div>
 <div id="slipArea"></div>
 <div id="toast"></div>
 
@@ -366,7 +382,7 @@ function startStudent() {
   initPad();
   tick();
   timers.push(setInterval(tick, 1000));
-  timers.push(setInterval(ping, 60000));
+  timers.push(setInterval(ping, 15000));
 }
 
 function endStudent(reason) {
@@ -396,7 +412,16 @@ async function ping() {
     const r = await api('ping', { token: S.token });
     if (!S) return;
     if (r.ok && !r.alive) endStudent(r.msg);
-    else if (r.ok && r.end) { S.end = r.end; S.offset = r.now - Date.now(); }
+    else if (r.ok && r.end) {
+      S.end = r.end; S.offset = r.now - Date.now();
+      if (r.scores && JSON.stringify(r.scores) !== JSON.stringify(S.scores)) {
+        S.scores = r.scores;
+        renderScores();
+        $('#rChanged').innerHTML = `<div class="done-box issue changed">✏ 선생님이 점수를 고쳤어요 (${hm(Date.now())}). 바뀐 점수를 다시 확인하세요.</div>`;
+        toast('선생님이 점수를 고쳤어요. 다시 확인해 주세요!');
+      }
+      if ('submitted' in r && JSON.stringify(r.submitted) !== JSON.stringify(S.submitted)) { S.submitted = r.submitted; renderSubmitted(); }
+    }
   } catch (e) { /* 잠깐 끊겨도 계속 */ }
 }
 
@@ -409,7 +434,15 @@ const gBadge = g => `<span class="grade g${esc(g)}">${esc(g)}</span>`;
 const ceil1 = v => Math.ceil(v * 10 - 1e-7) / 10;
 
 function renderResult() {
+  $('#rBody').innerHTML = '<div id="rChanged"></div><div id="rScores"></div><div id="rSign"></div>';
+  renderScores();
+  renderSign();
+}
+
+function renderScores() {
   const items = META.items, sc = S.scores;
+  const wasOpen = $$('#rScores details').map(d => d.open);
+  const simVal = $('#simIn') ? $('#simIn').value : '';
   const perf = items.filter(i => i.group === 'perf');
   const exam = items.filter(i => i.group === 'exam');
   const conv = i => isNum(sc[i.key]) ? sc[i.key] * i.weight / i.max : null;
@@ -482,13 +515,29 @@ function renderResult() {
   }
   h += `</div></details>`;
 
+  $('#rScores').innerHTML = h;
+  $$('#rScores details').forEach((d, i) => { if (wasOpen.length) d.open = wasOpen[i] !== false; });
+  const sim = $('#simIn');
+  if (sim) {
+    sim.addEventListener('input', () => {
+      const x = parseFloat(sim.value), o = $('#simOut'), st = S._sim;
+      if (!isFinite(x) || x < 0 || x > st.t.max) { o.innerHTML = `<span class="muted">0~${st.t.max} 사이 점수를 넣어 주세요.</span>`; return; }
+      const tot = st.base + x * st.t.weight / st.t.max;
+      o.innerHTML = `예상 합계 <b>${fmt(tot)}점</b> → ${gBadge(gradeOf(tot))}`;
+    });
+    if (simVal) { sim.value = simVal; sim.dispatchEvent(new Event('input')); }
+  }
+}
+
+function renderSign() {
+  let h = '';
   // ④ 확인·서명
   h += `<details class="sec" open id="secSign"><summary><span class="no">4</span> 점수 확인 & 서명 제출 <span id="signPill" class="pill"></span></summary><div class="sec-body">
+    <div class="tell">🙋 <b>점수가 이상하면</b> 이 화면을 켜 둔 채로 <b>선생님께 바로 말하세요.</b><br>
+      선생님이 고치면 이 화면의 점수가 저절로 바뀌어요. 바뀐 점수를 확인한 뒤 서명하세요.</div>
     <div id="doneBox"></div>
     <div id="signForm">
-      <label class="opt"><input type="radio" name="dec" value="ok"><span>✅ 위 점수를 모두 확인했고, <b>이상이 없습니다.</b></span></label>
-      <label class="opt"><input type="radio" name="dec" value="issue"><span>❗ 점수에 <b>이상한 부분이 있어요.</b> (선생님께 알려요)</span></label>
-      <textarea id="memo" class="hidden" maxlength="500" placeholder="어떤 평가 점수가 왜 이상한지 적어 주세요."></textarea>
+      <label class="opt"><input type="checkbox" id="chkOk"><span>✅ 위 점수를 모두 확인했고, <b>이상이 없습니다.</b></span></label>
       <label for="signName">내 이름 쓰기</label>
       <input id="signName" autocomplete="off" maxlength="20" placeholder="본인 이름">
       <div class="sign-box"><div class="sign-head"><span>✍ 아래 칸에 손가락이나 펜, 마우스로 서명하세요</span><button class="btn small" id="btnClearSign" type="button">지우기</button></div>
@@ -498,27 +547,23 @@ function renderResult() {
     </div>
   </div></details>`;
 
-  $('#rBody').innerHTML = h;
+  $('#rSign').innerHTML = h;
   renderSubmitted();
-
-  const sim = $('#simIn');
-  if (sim) sim.addEventListener('input', () => {
-    const x = parseFloat(sim.value), o = $('#simOut'), st = S._sim;
-    if (!isFinite(x) || x < 0 || x > st.t.max) { o.innerHTML = `<span class="muted">0~${st.t.max} 사이 점수를 넣어 주세요.</span>`; return; }
-    const tot = st.base + x * st.t.weight / st.t.max;
-    o.innerHTML = `예상 합계 <b>${fmt(tot)}점</b> → ${gBadge(gradeOf(tot))}`;
-  });
-  $$('input[name=dec]').forEach(r => r.addEventListener('change', () => $('#memo').classList.toggle('hidden', r.value !== 'issue' || !r.checked)));
   $('#btnSubmit').addEventListener('click', doSubmit);
   $('#btnClearSign').addEventListener('click', () => pad.clear());
 }
 
 function renderSubmitted() {
   const s = S.submitted, box = $('#doneBox'), pill = $('#signPill'), form = $('#signForm');
-  if (!s) { box.innerHTML = ''; pill.textContent = '아직 안 냄'; pill.className = 'pill warn'; form.classList.remove('hidden'); return; }
-  const issue = s.result === '이의 있음';
-  box.innerHTML = `<div class="done-box ${issue ? 'issue' : ''}">${issue ? '❗' : '✅'} ${esc(s.result)} — ${s.at ? mdhm(s.at) : ''}에 제출했어요.
-    ${issue ? '<br><small>선생님이 확인한 뒤 알려 줄 거예요.</small>' : ''}</div>
+  const wasHidden = form.classList.contains('hidden');
+  if (!s) { box.innerHTML = ''; pill.textContent = '아직 안 냄'; pill.className = 'pill warn'; form.classList.remove('hidden'); if (wasHidden) pad.resize(true); return; }
+  if (s.stale) {
+    box.innerHTML = `<div class="done-box issue">✏ 선생님이 점수를 고쳤어요. 바뀐 점수를 확인하고 <b>다시 서명</b>해 주세요.</div>`;
+    pill.textContent = '다시 서명 필요'; pill.className = 'pill warn';
+    form.classList.remove('hidden'); if (wasHidden) pad.resize(true);
+    return;
+  }
+  box.innerHTML = `<div class="done-box">✅ ${s.at ? mdhm(s.at) : ''}에 서명해서 제출했어요.</div>
     <button class="btn" id="btnResubmit" type="button">다시 제출하기</button>`;
   pill.textContent = '제출 완료'; pill.className = 'pill on';
   form.classList.add('hidden');
@@ -526,22 +571,20 @@ function renderSubmitted() {
 }
 
 async function doSubmit() {
-  const dec = document.querySelector('input[name=dec]:checked');
-  if (!dec) return setMsg('#submitMsg', '확인 결과를 골라 주세요.');
-  const memo = $('#memo').value.trim();
-  if (dec.value === 'issue' && !memo) return setMsg('#submitMsg', '어떤 점수가 이상한지 적어 주세요.');
+  if (!$('#chkOk').checked) return setMsg('#submitMsg', '점수를 확인했다는 칸에 체크해 주세요. 이상하면 선생님께 바로 말하세요.');
   const nm = $('#signName').value.replace(/\s+/g, '');
   if (nm !== S.student.name.replace(/\s+/g, '')) return setMsg('#submitMsg', '이름 칸에 본인 이름을 정확히 써 주세요.');
   if (pad.points < 15) return setMsg('#submitMsg', '서명 칸에 서명을 해 주세요.');
   const b = $('#btnSubmit'); b.disabled = true; setMsg('#submitMsg', '제출하는 중…', true);
   try {
-    const r = await api('submit', { token: S.token, decision: dec.value, memo, signName: nm, signImage: pad.toData() });
+    const r = await api('submit', { token: S.token, decision: 'ok', signName: nm, signImage: pad.toData() });
     if (!r.ok) {
       if (r.code === 'expired' || r.code === 'closed') return endStudent(r.msg);
       return setMsg('#submitMsg', r.msg);
     }
     S.submitted = r.submitted;
     setMsg('#submitMsg', '');
+    $('#chkOk').checked = false; $('#rChanged').innerHTML = '';
     renderSubmitted();
     toast('제출했어요. 확인해 줘서 고마워요!');
   } catch (e) { setMsg('#submitMsg', e.message); }
@@ -631,11 +674,11 @@ async function adminLogin() {
     const r = await api('adminLogin', { pw });
     if (!r.ok) return setMsg('#adminLoginMsg', r.msg);
     $('#inAdminPw').value = ''; setMsg('#adminLoginMsg', '');
-    A = { token: r.token, rows: [], vis: [], dirty: false, data: null, offset: 0 };
+    A = { token: r.token, rows: [], vis: [], dirty: false, data: null, offset: 0, sigs: {}, sigWait: new Set(), delKeys: new Set() };
     mode = 'admin';
     show('vAdmin');
     await adminLoad(true);
-    timers.push(setInterval(() => { if ($('#aAuto').checked) adminLoad(false).catch(() => {}); }, 30000));
+    timers.push(setInterval(() => { if ($('#aAuto').checked) adminLoad(false).catch(() => {}); }, 15000));
     timers.push(setInterval(renderWindow, 15000));
   } catch (e) { setMsg('#adminLoginMsg', e.message); }
   finally { b.disabled = false; }
@@ -721,25 +764,58 @@ async function setWindow(start, end, classes) {
 function renderStatus() {
   const d = A.data, cls = $('#aStatClass').value;
   const list = d.students.filter(s => !cls || clsKey(s.sid) === cls).sort((a, b) => a.sid.localeCompare(b.sid));
-  let viewed = 0, ok = 0, issue = 0, notSub = 0, notView = 0, rows = '';
+  let viewed = 0, ok = 0, stale = 0, notSub = 0, notView = 0, rows = '';
   list.forEach(s => {
     const r = d.records[s.sid] || {};
-    const v = r.views > 0;
+    const v = r.views > 0, signed = !!r.result;
     if (v) viewed++; else notView++;
-    if (r.result === '이상 없음') ok++; else if (r.result === '이의 있음') issue++; else if (v) notSub++;
-    const res = r.result === '이상 없음' ? '<span class="ok-t">✔ 이상 없음</span>'
-      : r.result === '이의 있음' ? '<span class="mid-t">❗ 이의 있음</span>' : '<span class="no-t">미제출</span>';
-    const sign = /^https:\/\/(drive|docs)\.google\.com\//.test(r.signUrl || '') ? `<a href="${esc(r.signUrl)}" target="_blank" rel="noopener noreferrer">서명 보기</a>` : '-';
-    rows += `<tr class="${r.result === '이의 있음' ? 'issue' : ''}"><td>${esc(s.cls)}</td><td>${esc(s.no)}</td><td>${esc(s.name)}</td>
+    if (signed && r.stale) stale++; else if (signed) ok++; else if (v) notSub++;
+    const res = signed && r.stale ? '<span class="mid-t">✏ 점수 바뀜<br>다시 서명 필요</span>'
+      : signed ? '<span class="ok-t">✔ 서명 완료</span>' : '<span class="no-t">미제출</span>';
+    const sig = r.signId ? `<img class="sig" data-sig="${esc(r.signId)}" data-who="${esc(s.cls + '반 ' + s.no + '번 ' + s.name)}" alt="서명" ${A.sigs[r.signId] ? `src="${A.sigs[r.signId]}"` : ''}>` : '<span class="muted">-</span>';
+    rows += `<tr class="${signed && r.stale ? 'issue' : ''}"><td>${esc(s.cls)}</td><td>${esc(s.no)}</td><td>${esc(s.name)}</td>
       <td>${v ? `<span class="ok-t">✔</span> ${r.views}회 · ${r.lastView ? mdhm(r.lastView) : ''}` : '<span class="no-t">안 봄</span>'}</td>
       <td>${res}${r.submitCount > 1 ? ` <small>(${r.submitCount}번)</small>` : ''}</td>
-      <td class="memo">${esc(r.memo || '')}</td><td>${sign}</td><td>${r.submittedAt ? mdhm(r.submittedAt) : '-'}</td></tr>`;
+      <td class="sigcell">${sig}</td><td>${r.submittedAt ? mdhm(r.submittedAt) : '-'}</td>
+      <td><button class="btn small" data-fix="${esc(s.sid)}">✏ 점수 고치기</button></td></tr>`;
   });
-  $('#aStatTable').innerHTML = `<thead><tr><th>반</th><th>번호</th><th>이름</th><th>점수 확인</th><th>확인·서명</th><th>이의 내용</th><th>서명</th><th>제출 시각</th></tr></thead><tbody>${rows || '<tr><td colspan="8">학생이 없어요. 아래 점수 입력에서 학생을 넣고 저장하세요.</td></tr>'}</tbody>`;
+  $('#aStatTable').innerHTML = `<thead><tr><th>반</th><th>번호</th><th>이름</th><th>점수 확인</th><th>서명 상태</th><th>서명</th><th>제출 시각</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="8">학생이 없어요. 아래 점수 입력에서 학생을 넣고 저장하세요.</td></tr>'}</tbody>`;
   $('#aChips').innerHTML = `<span class="chip">전체<b>${list.length}</b></span><span class="chip g">점수 확인<b>${viewed}</b></span>
-    <span class="chip g">이상 없음 서명<b>${ok}</b></span><span class="chip o">이의 있음<b>${issue}</b></span>
+    <span class="chip g">서명 완료<b>${ok}</b></span><span class="chip o">다시 서명 필요<b>${stale}</b></span>
     <span class="chip r">보고 미제출<b>${notSub}</b></span><span class="chip r">아직 안 봄<b>${notView}</b></span>`;
-  $('#aStatSum').textContent = `서명 ${ok + issue}/${list.length}`;
+  $('#aStatSum').textContent = `서명 ${ok}/${list.length}`;
+  loadSigs();
+}
+
+// 서명 그림을 화면에 바로 띄우기 (한 번 받은 그림은 다시 받지 않음)
+async function loadSigs() {
+  const need = [...new Set($$('#aStatTable img[data-sig]').map(i => i.dataset.sig))].filter(id => !A.sigs[id] && !A.sigWait.has(id));
+  for (let i = 0; i < need.length; i += 20) {
+    const ids = need.slice(i, i + 20);
+    ids.forEach(id => A.sigWait.add(id));
+    try {
+      const r = await adminCall('adminSigns', { ids });
+      if (r.ok) Object.keys(r.images).forEach(id => {
+        A.sigs[id] = r.images[id];
+        $$(`#aStatTable img[data-sig="${id}"]`).forEach(img => { img.src = r.images[id]; });
+      });
+    } catch (e) { /* 다음 새로고침 때 다시 */ }
+    ids.forEach(id => A.sigWait.delete(id));
+  }
+}
+
+// 현황 표에서 [점수 고치기] → 그 반 점수표로 이동해 그 학생 줄에 커서
+function jumpToStudent(sid) {
+  const sec = $('#aGrid').closest('details'); sec.open = true;
+  $('#aGridClass').value = clsKey(sid);
+  renderGrid();
+  const tr = $$('#aGrid tbody tr').find(t => sidOf(A.rows[Number(t.dataset.i)]) === sid);
+  if (!tr) return toast('점수표에서 이 학생을 찾지 못했어요. [시트에서 다시 불러오기]를 눌러 보세요.');
+  $$('#aGrid tr.hl').forEach(t => t.classList.remove('hl'));
+  tr.classList.add('hl');
+  tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const inp = tr.querySelector('input[data-c="4"]'); inp.focus(); inp.select();
+  toast('점수를 고친 뒤 [💾 시트에 저장하기]를 누르면 학생 화면에 바로 반영돼요.');
 }
 
 /* 점수 입력 표 */
@@ -765,7 +841,18 @@ function loadGrid(students) {
   for (let i = 0; i < 5; i++) A.rows.push(emptyRow());
   setDirty(false);
 }
-function setDirty(v) { A.dirty = v; $('#aDirty').classList.toggle('hidden', !v); }
+// 줄마다 수정 표시(_d)를 해 두고, 반만 저장하면 그 반 표시만 지움
+function setDirty(v) {
+  if (v === false) { A.rows.forEach(r => { r._d = false; }); A.delKeys = new Set(); }
+  A.dirty = A.rows.some(r => r._d) || (A.delKeys && A.delKeys.size > 0);
+  $('#aDirty').classList.toggle('hidden', !A.dirty);
+}
+function markRow(r) { r._d = true; setDirty(true); }
+function updateSelCount() {
+  const n = A.vis.filter(i => A.rows[i]._sel).length;
+  $('#aSelCount').textContent = n ? `✔ ${n}명 선택됨` : '';
+  const all = $('#aSelAll'); if (all) { const cand = A.vis.filter(i => sidOf(A.rows[i])); all.checked = cand.length > 0 && cand.every(i => A.rows[i]._sel); }
+}
 function dupSet() {
   const seen = {}, dup = new Set();
   A.rows.forEach(r => { const s = sidOf(r); if (!s) return; if (seen[s]) dup.add(s); seen[s] = 1; });
@@ -795,14 +882,17 @@ function renderGrid() {
   const cls = $('#aGridClass').value;
   A.vis = A.rows.map((r, i) => i).filter(i => !cls || clsKey(sidOf(A.rows[i])) === cls);
   const dup = dupSet();
-  let h = '<thead><tr><th></th>' + COLS.map(c => `<th>${c.label}</th>`).join('') + '<th>수행<br>합계</th><th></th></tr></thead><tbody>';
+  let h = '<thead><tr><th><input type="checkbox" id="aSelAll" data-selall title="이 화면의 학생 모두 선택"></th><th></th>' + COLS.map(c => `<th>${c.label}</th>`).join('') + '<th>수행<br>합계</th><th></th></tr></thead><tbody>';
   A.vis.forEach((idx, n) => {
     const r = A.rows[idx];
-    h += `<tr data-i="${idx}"><td class="rn">${n + 1}</td>` + COLS.map((c, ci) =>
+    h += `<tr data-i="${idx}"><td class="ck">${sidOf(r) ? `<input type="checkbox" data-sel ${r._sel ? 'checked' : ''}>` : ''}</td><td class="rn">${n + 1}</td>` + COLS.map((c, ci) =>
       `<td><input data-c="${ci}" class="${c.cls || ''} ${cellState(r, c, dup)}" value="${esc(getV(r, c))}" autocomplete="off" ${c.item ? 'inputmode="decimal"' : ''}></td>`).join('')
       + `<td class="psum">${perfSumOf(r)}</td><td><button data-del title="이 줄 지우기">🗑</button></td></tr>`;
   });
   $('#aGrid').innerHTML = h + '</tbody>';
+  updateSelCount();
+  const cls2 = $('#aGridClass').value;
+  $('#btnSaveGrid').textContent = cls2 ? `💾 ${clsLabel(cls2)}만 저장하기` : '💾 시트에 저장하기 (전체 반)';
 }
 function refreshSidStates() {
   const dup = dupSet();
@@ -815,16 +905,22 @@ function refreshSidStates() {
   });
 }
 const grid = $('#aGrid');
+grid.addEventListener('change', e => {
+  const t = e.target;
+  if ('selall' in t.dataset) { A.vis.forEach(i => { if (sidOf(A.rows[i])) A.rows[i]._sel = t.checked; }); $$('#aGrid input[data-sel]').forEach(c => { c.checked = t.checked; }); updateSelCount(); }
+  else if ('sel' in t.dataset) { A.rows[Number(t.closest('tr').dataset.i)]._sel = t.checked; updateSelCount(); }
+});
 grid.addEventListener('input', e => {
-  const t = e.target; if (t.tagName !== 'INPUT') return;
+  const t = e.target; if (t.tagName !== 'INPUT' || t.dataset.c == null) return;
   const tr = t.closest('tr'), r = A.rows[Number(tr.dataset.i)], c = COLS[Number(t.dataset.c)];
-  setV(r, c, t.value); setDirty(true);
+  if (c.num && !r._d0) { r._d0 = clsKey(sidOf(r)); }   // 원래 반 기억 (반을 바꿔 옮긴 경우 대비)
+  setV(r, c, t.value); markRow(r);
   t.classList.remove('err', 'warn'); const st = cellState(r, c, dupSet()); if (st) t.classList.add(st);
   if (!c.item) refreshSidStates();
   tr.querySelector('.psum').textContent = perfSumOf(r);
 });
 grid.addEventListener('keydown', e => {
-  const t = e.target; if (t.tagName !== 'INPUT') return;
+  const t = e.target; if (t.tagName !== 'INPUT' || t.dataset.c == null) return;
   if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(e.key)) return;
   e.preventDefault();
   const tr = e.key === 'ArrowUp' ? t.closest('tr').previousElementSibling : t.closest('tr').nextElementSibling;
@@ -834,10 +930,11 @@ grid.addEventListener('click', e => {
   const b = e.target.closest('button[data-del]'); if (!b) return;
   const idx = Number(b.closest('tr').dataset.i), r = A.rows[idx];
   if (rowHas(r) && !confirm(`${r.cls}반 ${r.no}번 ${r.name || ''} 줄을 지울까요? (저장해야 시트에서도 지워져요)`)) return;
+  const k = clsKey(sidOf(r)); if (k) A.delKeys.add(k);
   A.rows.splice(idx, 1); setDirty(true); renderGrid();
 });
 grid.addEventListener('paste', e => {
-  const t = e.target; if (t.tagName !== 'INPUT') return;
+  const t = e.target; if (t.tagName !== 'INPUT' || t.dataset.c == null) return;
   const text = (e.clipboardData || window.clipboardData).getData('text') || '';
   let lines = text.replace(/\r/g, '').split('\n');
   if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
@@ -850,42 +947,66 @@ grid.addEventListener('paste', e => {
     if (r0 + i < A.vis.length) idx = A.vis[r0 + i];
     else { A.rows.push(emptyRow()); idx = A.rows.length - 1; A.vis.push(idx); added++; }
     ln.split('\t').forEach((cell, j) => { const c = COLS[c0 + j]; if (c) setV(A.rows[idx], c, cell.trim()); });
+    A.rows[idx]._d = true;
   });
   if (added && $('#aGridClass').value) $('#aGridClass').value = '';
   setDirty(true); buildClassOptions(); renderGrid();
   toast(`${lines.length}줄을 붙여 넣었어요. [시트에 저장하기]를 눌러야 저장돼요.`);
 });
 
+// 비밀번호 만들기: 지금 보고 있는 반에서 ✔ 체크한 학생만. 체크한 학생이 없으면 이 화면에서 비밀번호가 빈 학생만.
 function genPw() {
-  const used = new Set(A.rows.map(r => r.pw.trim()).filter(Boolean));
+  const visRows = A.vis.map(i => A.rows[i]).filter(r => sidOf(r));
+  const sel = visRows.filter(r => r._sel);
+  const target = sel.length ? sel : visRows.filter(r => !r.pw.trim());
+  if (!target.length) return toast('비밀번호를 만들 학생이 없어요. 학생 앞 칸에 ✔ 체크하거나, 비밀번호가 빈 학생이 있어야 해요.');
+  const had = target.filter(r => r.pw.trim()).length;
+  const where = $('#aGridClass').value ? clsLabel($('#aGridClass').value) : '전체 반';
+  if (!confirm(`${where}에서 ${sel.length ? '체크한' : '비밀번호가 빈'} 학생 ${target.length}명의 비밀번호를 만들까요?` + (had ? `\n(이미 비밀번호가 있던 ${had}명은 새 비밀번호로 바뀌어요)` : ''))) return;
+  const keep = new Set(A.rows.filter(r => !target.includes(r)).map(r => r.pw.trim()).filter(Boolean));
   const rnd = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + a[0] % 900000); };
-  let n = 0;
-  A.rows.forEach(r => { if (sidOf(r) && !r.pw.trim()) { let p; do { p = rnd(); } while (used.has(p)); used.add(p); r.pw = p; n++; } });
-  if (!n) return toast('비밀번호가 빈 학생이 없어요.');
-  setDirty(true); renderGrid(); toast(`${n}명의 비밀번호를 만들었어요. [시트에 저장하기]를 눌러 주세요.`);
+  target.forEach(r => { let p; do { p = rnd(); } while (keep.has(p)); keep.add(p); r.pw = p; r._d = true; r._sel = false; });
+  setDirty(true); renderGrid();
+  toast(`${target.length}명의 비밀번호를 만들었어요. [저장하기]를 눌러 주세요.`);
 }
 
+// 저장하기: 반을 골라 보고 있으면 그 반만 시트에 저장 (다른 반은 시트에 있던 그대로)
 async function saveGrid() {
+  const cls = $('#aGridClass').value;
+  const pick = A.rows.filter(r => rowHas(r) && (!cls || clsKey(sidOf(r)) === cls));
   const dup = dupSet();
-  const bad = A.rows.some(r => rowHas(r) && COLS.some(c => cellState(r, c, dup) === 'err'));
+  const bad = (cls ? pick : A.rows.filter(rowHas)).some(r => COLS.some(c => cellState(r, c, dup) === 'err'));
   if (bad) return toast('빨간 칸을 먼저 고쳐 주세요. (반·번호 빠짐·중복, 이름 빠짐, 만점 초과 등)');
-  const rows = A.rows.filter(rowHas).map(r => ({ cls: String(r.cls).trim(), no: String(r.no).trim(), name: r.name.trim(), pw: r.pw.trim(), scores: r.s }));
-  if (!rows.length) return toast('저장할 학생이 없어요.');
+  const rows = pick.map(r => ({ cls: String(r.cls).trim(), no: String(r.no).trim(), name: r.name.trim(), pw: r.pw.trim(), scores: r.s }));
+  if (!rows.length && !cls) return toast('저장할 학생이 없어요.');
   const noPw = rows.filter(r => !r.pw).length;
-  if (!confirm(`${rows.length}명을 시트에 저장할까요?\n시트의 '학생점수' 탭이 이 표 내용으로 바뀌어요.` + (noPw ? `\n(비밀번호가 빈 학생 ${noPw}명은 점수를 볼 수 없어요)` : ''))) return;
+  const moved = cls ? A.rows.filter(r => r._d0 === cls && clsKey(sidOf(r)) !== cls).length : 0;
+  const msg = cls
+    ? `${clsLabel(cls)} ${rows.length}명만 저장할까요?\n다른 반은 시트에 있던 그대로예요.` + (moved ? `\n(다른 반으로 옮긴 ${moved}명은 그 반에서 따로 저장해야 해요)` : '')
+    : `전체 ${rows.length}명을 저장할까요?\n시트의 '학생점수' 탭이 이 표 내용으로 바뀌어요.`;
+  if (!confirm(msg + (noPw ? `\n(비밀번호가 빈 학생 ${noPw}명은 점수를 볼 수 없어요)` : ''))) return;
   const b = $('#btnSaveGrid'); b.disabled = true;
   try {
-    const r = await adminCall('adminSaveScores', { rows });
+    const r = await adminCall('adminSaveScores', cls ? { rows, cls: toInt(cls.slice(1)) } : { rows });
     if (!r.ok) return toast(r.msg);
-    setDirty(false); toast(`${r.count}명을 저장했어요.`);
-    await adminLoad(true);
+    if (cls) {
+      A.rows.forEach(x => { if (clsKey(sidOf(x)) === cls) { x._d = false; x._d0 = ''; } });
+      A.delKeys.delete(cls);
+      setDirty(true);
+      toast(`${clsLabel(cls)} ${r.count}명을 저장했어요. 학생 화면에 15초 안에 반영돼요.`);
+      await adminLoad(false);
+    } else {
+      setDirty(false); toast(`${r.count}명을 저장했어요.`);
+      await adminLoad(true);
+    }
   } catch (e) { toast(e.message); }
   finally { b.disabled = false; }
 }
 
 function printSlips() {
-  if (A.dirty) return toast('먼저 [시트에 저장하기]를 눌러 주세요.');
-  const list = A.vis.map(i => A.rows[i]).filter(r => sidOf(r) && r.pw.trim());
+  const all = A.vis.map(i => A.rows[i]).filter(r => sidOf(r) && r.pw.trim());
+  const list = all.some(r => r._sel) ? all.filter(r => r._sel) : all;
+  if (list.some(r => r._d)) return toast('먼저 [저장하기]를 눌러 주세요.');
   if (!list.length) return toast('인쇄할 학생(비밀번호 있음)이 없어요.');
   const url = location.origin + location.pathname;
   $('#slipArea').innerHTML = list.map(r => `<div class="slip"><div>${esc(META.title)}</div>
@@ -925,6 +1046,13 @@ $('#btnSaveWin').addEventListener('click', async () => {
 $('#btnCloseNow').addEventListener('click', async () => { if (confirm('지금 바로 점수 확인을 닫을까요?')) { try { await setWindow(0, 0, []); } catch (e) { toast(e.message); } } });
 $('#btnReload').addEventListener('click', () => adminLoad(false).then(() => toast('새로 불러왔어요.')).catch(e => toast(e.message)));
 $('#aStatClass').addEventListener('change', renderStatus);
+$('#aStatTable').addEventListener('click', e => {
+  const fx = e.target.closest('button[data-fix]');
+  if (fx) return jumpToStudent(fx.dataset.fix);
+  const img = e.target.closest('img.sig');
+  if (img && img.src) { $('#sigBig').src = img.src; $('#sigWho').textContent = img.dataset.who; $('#sigModal').classList.remove('hidden'); }
+});
+$('#sigModal').addEventListener('click', () => $('#sigModal').classList.add('hidden'));
 $('#btnUnlock').addEventListener('click', async () => {
   try { const r = await adminCall('adminUnlock', { cls: $('#aUnlockCls').value, no: $('#aUnlockNo').value }); toast(r.ok ? '잠금을 풀었어요.' : r.msg); if (r.ok) { $('#aUnlockCls').value = ''; $('#aUnlockNo').value = ''; } } catch (e) { toast(e.message); }
 });
