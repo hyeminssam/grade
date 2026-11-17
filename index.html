@@ -81,7 +81,10 @@
   .target .t1{font-size:16px;color:var(--sub)}
   .target .t2{font-size:22px;font-weight:700}
   .target .t2 b{font-size:30px;color:var(--pri-d)}
-  .target.done{background:#effaf3;border-color:#b7e6c8}.target.no{background:#f6f7f9;color:var(--sub)}
+  .target.done{background:#effaf3;border-color:#b7e6c8}.target.impossible{background:#fdecec;border-color:#f3b4b4}
+  .target.impossible .grade{opacity:.45}
+  .nope{display:block;color:#b91c1c;font-size:28px;font-weight:900}
+  .nope-sub{display:block;color:#9b1c1c;font-size:17px;font-weight:700}
   .sim{margin-top:16px;padding:14px;border-radius:14px;background:#f5f8ff;border:2px dashed #b9cbf5}
   .sim input{max-width:180px;display:inline-block}
   .sim-out{margin-top:10px;font-size:22px;font-weight:700;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -502,7 +505,7 @@ function renderScores() {
       const range = idx ? `합계 ${c.min}점 이상 ${cuts[idx - 1].min}점 미만` : `합계 ${c.min}점 이상`;
       let cls = '', txt;
       if (need <= 0) { cls = 'done'; txt = `${esc(t.label)} 0점이어도 이미 넘었어요 ✔`; }
-      else if (need > t.max) { cls = 'no'; txt = `${esc(t.label)} ${t.max}점을 받아도 닿기 어려워요`; }
+      else if (need > t.max) { cls = 'impossible'; txt = `<span class="nope">❌ 불가능</span><span class="nope-sub">${esc(t.label)} ${t.max}점을 받아도 ${esc(c.grade)}는 받을 수 없어요.</span>`; }
       else txt = `${esc(t.label)} <b>${fmt(ceil1(need))}점</b> 이상`;
       h += `<div class="target ${cls}"><span class="grade g${esc(c.grade)}">${esc(c.grade)}</span><div><div class="t1">${range}</div><div class="t2">${txt}</div></div></div>`;
     });
